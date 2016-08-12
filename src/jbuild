@@ -1,0 +1,8 @@
+(library (
+  (name async_interactive) (wrapped false)
+  (public_name async_interactive)
+  (libraries (
+    async
+    core
+  ))
+))
