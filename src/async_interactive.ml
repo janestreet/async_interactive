@@ -1,7 +1,7 @@
-open Core.Std
+open Core
 open Async.Std
 
-let interactive = ref Core.Std.Unix.(isatty stdin && isatty stdout)
+let interactive = ref Core.Unix.(isatty stdin && isatty stdout)
 
 let print_string_internal string =
   if not !interactive
