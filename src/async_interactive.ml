@@ -1,5 +1,5 @@
 open Core
-open Async.Std
+open Async
 
 let interactive = ref Core.Unix.(isatty stdin && isatty stdout)
 
