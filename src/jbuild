@@ -6,3 +6,5 @@
     core
   ))
 ))
+
+(jbuild_version jane_street)
