@@ -1,6 +1,7 @@
 (library (
   (name async_interactive)
   (public_name async_interactive)
+  (flags (:standard -safe-string))
   (libraries (
     async
     core
