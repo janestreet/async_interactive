@@ -234,7 +234,22 @@ let show_file ?pager ?msg ~file () =
     | Some msg ->
       sprintf "{ echo %s; cat %s; } | %s" (q msg) (q file) pager
   in
-  (* Use 'system cat' rather than printf to handle 'less' *)
-  Monitor.protect (fun () -> Unix.system_exn cmd)
+  Monitor.protect (fun () ->
+    match%map Unix.system cmd with
+    | Ok () -> ()
+    (* 141 is how bash reports that its child (the pager) died of SIGPIPE. *)
+    | Error (`Exit_non_zero 141) -> ()
+    | _ as status ->
+      raise_s [%message "command failed" cmd (status : Unix.Exit_or_signal.t)])
     ~finally:(fun () -> Deferred.unit)
+;;
+
+let show_string_with_pager ?pager contents =
+  let%bind (filename, fd) = Unix.mkstemp "async_interactive_show_string_with_pager" in
+  let%bind () = Unix.close fd in
+  Monitor.protect
+    (fun () ->
+       let%bind () = Writer.save filename ~contents in
+       show_file ?pager ~file:filename ())
+    ~finally:(fun () -> Unix.unlink filename)
 ;;

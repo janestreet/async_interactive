@@ -3,6 +3,7 @@ open! Async
 
 val interactive : bool ref
 
+(** These [print*] functions only print when [!interactive]. *)
 val print_string : string -> unit Deferred.t
 
 val print_endline : string -> unit Deferred.t
@@ -44,11 +45,17 @@ val ask_ynf
   -> ('a, unit, string, bool Deferred.t) format4
   -> 'a
 
+(** These [show*] functions print even when [not !interactive]. *)
 val show_file
   :  ?pager:string
   -> ?msg:string
   -> file:string
   -> unit
+  -> unit Deferred.t
+
+val show_string_with_pager
+  :  ?pager:string (** default: $PAGER if set, or else less *)
+  -> string
   -> unit Deferred.t
 
 module Job : sig
