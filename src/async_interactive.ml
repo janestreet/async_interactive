@@ -245,8 +245,10 @@ let show_file ?pager ?msg ~file () =
 ;;
 
 let show_string_with_pager ?pager contents =
-  let%bind (filename, fd) = Unix.mkstemp "async_interactive_show_string_with_pager" in
-  let%bind () = Unix.close fd in
+  let%bind filename =
+    In_thread.run (fun () ->
+      Core.Filename.temp_file "async_interactive_show_string_with_pager" "")
+  in
   Monitor.protect
     (fun () ->
        let%bind () = Writer.save filename ~contents in
