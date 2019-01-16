@@ -1,5 +1,6 @@
 open Core
 open Async
+open! Int.Replace_polymorphic_compare
 
 let interactive = ref Core.Unix.(isatty stdin && isatty stdout)
 
@@ -209,6 +210,31 @@ let ask_yn ?default question =
     [ (y, true)
     ; (n, false)
     ]
+;;
+
+let print ?red msg =
+  (* One may be tempted to use Console.printf `Red ... but that's a non-async
+     printf. We don't use Console.Ansi.string_with_attr because
+     it's not in the base projection. *)
+  if Option.is_some red
+  then printf "[1;31m%s[0m\n" msg
+  else printf "%s\n" msg
+;;
+
+let arithmetic_challenge_exn ?red () =
+  Random.self_init ();
+  let a = 1 + Random.int 20 in
+  let b = 1 + Random.int 10 in
+  let c = 1 + (Random.int b) in
+  let d = (a + b) mod c in
+  print ?red (sprintf "What is (%d + %d) mod %d?" a b c)
+  >>= fun () ->
+  read_line ()
+  >>| function
+  | `Eof     -> failwith "Received Eof while waiting for arithmetic challenge"
+  | `Ok line ->
+    if d <> Int.of_string line
+    then failwith "Incorrect answer for arithmetic challenge"
 ;;
 
 let ask_ynf ?default question =

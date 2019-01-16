@@ -45,6 +45,16 @@ val ask_ynf
   -> ('a, unit, string, bool Deferred.t) format4
   -> 'a
 
+(** This will prompt the user to solve a math problem and exit if they fail.
+    [red] will make the prompt print in red the the screen to make it more visually loud
+
+    This will raise if no input or incorrect input is given
+*)
+val arithmetic_challenge_exn
+  :  ?red:unit
+  -> unit
+  -> unit Deferred.t
+
 (** These [show*] functions print even when [not !interactive]. *)
 val show_file
   :  ?pager:string
