@@ -62,18 +62,18 @@ module Job : sig
 
       1 process:
 
-      {[
+      {v
         starting doing stuff A in process 1234 ... done.
-      ]}
+      v}
 
       Multiple processes:
 
-      {[
+      {v
         starting doing stuff A in process 1234 ...
-                                            starting doing stuff A in process 4321 ...
-                                                                                all done.
+        starting doing stuff A in process 4321 ...
+        all done.
         starting doing stuff A in process 5678 ... done.
-      ]}
+      v}
   *)
   val run : f:(unit -> 'a Deferred.t) -> ('r, unit, string, 'a Deferred.t) format4 -> 'r
 end
