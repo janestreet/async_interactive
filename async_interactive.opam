@@ -14,7 +14,7 @@ depends: [
   "async"
   "core"
   "ppx_jane"
-  "dune"     {>= "1.5.1"}
+  "dune"     {>= "2.0.0"}
 ]
 synopsis: "Utilities for building simple command-line based user interfaces"
 description: "
