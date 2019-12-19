@@ -24,6 +24,8 @@ end
     one of the [choices].  At most once choice can be the [default] choice. *)
 val ask_dispatch_with_help
   :  ?show_options:bool (** default is [true] *)
+  -> ?show_help:bool
+  (** [show_help] prints the help message above the prompt. Default is [false] *)
   -> string
   -> 'a Choice.t list
   -> 'a Deferred.t

@@ -156,7 +156,7 @@ let ask_dispatch (type a) ?(show_options = true) question (dispatch : (char * a)
   loop ()
 ;;
 
-let ask_dispatch_with_help ?show_options question dispatch =
+let ask_dispatch_with_help ?show_options ?(show_help = false) question dispatch =
   let cr_dispatch = List.map dispatch ~f:(fun (char, value, _help) -> char, `Ok value) in
   let cr_dispatch = cr_dispatch @ [ '?', `Help ] in
   let print_help () =
@@ -164,6 +164,7 @@ let ask_dispatch_with_help ?show_options question dispatch =
       don't_wait_for (printf "%c : %s\n" char help));
     don't_wait_for (printf "? : Print this help\n")
   in
+  if show_help then print_help ();
   let rec loop () =
     ask_dispatch question cr_dispatch ?show_options
     >>= function
