@@ -106,6 +106,7 @@ let choose_dispatch (type a) ~(dispatch : (char * a) list)
       (match List.filter dispatch ~f:(fun (c, _) -> Char.is_uppercase c) with
        | _ :: _ :: _ as l ->
          failwiths
+           ~here:[%here]
            "[Async_interactive.choose_dispatch] supplied multiple defaults"
            (List.map l ~f:fst)
            [%sexp_of: char list]
