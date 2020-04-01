@@ -105,11 +105,10 @@ let choose_dispatch (type a) ~(dispatch : (char * a) list)
     | None ->
       (match List.filter dispatch ~f:(fun (c, _) -> Char.is_uppercase c) with
        | _ :: _ :: _ as l ->
-         failwiths
-           ~here:[%here]
-           "[Async_interactive.choose_dispatch] supplied multiple defaults"
-           (List.map l ~f:fst)
-           [%sexp_of: char list]
+         raise_s
+           [%sexp
+             "[Async_interactive.choose_dispatch] supplied multiple defaults"
+           , (List.map l ~f:fst : char list)]
        | [ (_, a) ] -> return (Ok a)
        | [] -> printf "Invalid empty reply.\n" >>| fun () -> Error ())
     | Some ch ->
