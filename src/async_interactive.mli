@@ -48,6 +48,12 @@ val show_string_with_pager
   -> string
   -> unit Deferred.t
 
+val with_writer_to_pager
+  :  ?pager:string
+  -> unit
+  -> f:(Writer.t -> unit Deferred.t)
+  -> unit Deferred.t
+
 module Job : sig
   (** This module allows you to have messages printed when you start and finish jobs
       without having a bad interaction in case of interleaved jobs run in parallel.

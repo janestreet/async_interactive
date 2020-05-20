@@ -15,6 +15,7 @@ depends: [
   "core"
   "ppx_jane"
   "dune"     {>= "2.0.0"}
+  "spawn"    {>= "v0.12"}
 ]
 synopsis: "Utilities for building simple command-line based user interfaces"
 description: "

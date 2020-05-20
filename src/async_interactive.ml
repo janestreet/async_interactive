@@ -210,32 +210,57 @@ let arithmetic_challenge_exn ?red () =
 
 let ask_ynf ?default question = Printf.ksprintf (ask_yn ?default) question
 
+let get_pager ?pager () =
+  match pager with
+  | Some pager -> pager
+  | None ->
+    (match Sys.getenv "PAGER" with
+     (* Make sure -R is passed to 'less' *)
+     | Some p when String.is_prefix p ~prefix:"less" -> p ^ " -R"
+     | Some p -> p
+     | None -> "less -R")
+;;
+
+let run_with_pager ?pager ~cmd ~stdin () =
+  let pager = get_pager ?pager () in
+  let full_cmd = sprintf "%s | %s" cmd pager in
+  Monitor.protect
+    (fun () ->
+       let pid =
+         Spawn.spawn
+           ~prog:"/bin/sh"
+           ~argv:[ "sh"; "-c"; full_cmd ]
+           ?stdin:
+             (match stdin with
+              | Some fd -> Some (Fd.file_descr_exn fd)
+              | None -> None)
+           ()
+       in
+       let%bind () =
+         match stdin with
+         | None -> return ()
+         | Some fd -> Fd.close fd
+       in
+       match%map Unix.waitpid (Pid.of_int pid) with
+       | Ok () -> ()
+       (* 141 is how bash reports that its child (the pager) died of SIGPIPE.
+          This can happen if the program is run non-interactively and its output is
+          only partially consumed. We saw this in tests where we do things like
+          [cmd ... | grep -q foo]. *)
+       | Error (`Exit_non_zero 141) -> ()
+       | _ as status ->
+         raise_s [%message "command failed" full_cmd (status : Unix.Exit_or_signal.t)])
+    ~finally:(fun () -> Deferred.unit)
+;;
+
 let show_file ?pager ?msg ~file () =
-  let pager =
-    match pager with
-    | Some pager -> pager
-    | None ->
-      (match Sys.getenv "PAGER" with
-       (* Make sure -R is passed to 'less' *)
-       | Some p when String.is_prefix p ~prefix:"less" -> p ^ " -R"
-       | Some p -> p
-       | None -> "less -R")
-  in
   let q = Filename.quote in
   let cmd =
     match msg with
-    | None -> sprintf "cat %s | %s" (q file) pager
-    | Some msg -> sprintf "{ echo %s; cat %s; } | %s" (q msg) (q file) pager
+    | None -> sprintf "cat %s" (q file)
+    | Some msg -> sprintf "{ echo %s; cat %s; }" (q msg) (q file)
   in
-  Monitor.protect
-    (fun () ->
-       match%map Unix.system cmd with
-       | Ok () -> ()
-       (* 141 is how bash reports that its child (the pager) died of SIGPIPE. *)
-       | Error (`Exit_non_zero 141) -> ()
-       | _ as status ->
-         raise_s [%message "command failed" cmd (status : Unix.Exit_or_signal.t)])
-    ~finally:(fun () -> Deferred.unit)
+  run_with_pager ?pager ~cmd ~stdin:None ()
 ;;
 
 let show_string_with_pager ?pager contents =
@@ -248,4 +273,33 @@ let show_string_with_pager ?pager contents =
        let%bind () = Writer.save filename ~contents in
        show_file ?pager ~file:filename ())
     ~finally:(fun () -> Unix.unlink filename)
+;;
+
+let all_wait_errors_unit fs =
+  let%bind results =
+    Deferred.all (List.map fs ~f:(Monitor.try_with ~extract_exn:true))
+  in
+  List.map results ~f:Or_error.of_exn_result
+  |> Or_error.combine_errors_unit
+  |> ok_exn
+  |> return
+;;
+
+let with_writer_to_pager ?pager () ~f =
+  let info = Info.of_string "Async_interactive.with_writer_to_pager" in
+  let%bind `Reader pipe_r, `Writer pipe_w = Unix.pipe info in
+  let writer =
+    (* Setting these two flags has the same effect as
+       [Writer.behave_nicely_in_pipeline], apart from it does not initiate shutdown
+       when [pager] quits. *)
+    Writer.create pipe_w ~raise_when_consumer_leaves:false ~buffer_age_limit:`Unlimited
+  in
+  (* [all_wait_errors_unit] ensures that we don't proceed with the error handling before
+     we're done with the process, but also we don't leave the [f] running in the
+     background if the user exits the pager early. *)
+  all_wait_errors_unit
+    [ (fun () ->
+        Monitor.protect (fun () -> f writer) ~finally:(fun () -> Writer.close writer))
+    ; (fun () -> run_with_pager ?pager ~cmd:"cat" ~stdin:(Some pipe_r) ())
+    ]
 ;;
