@@ -276,9 +276,7 @@ let show_string_with_pager ?pager contents =
 ;;
 
 let all_wait_errors_unit fs =
-  let%bind results =
-    Deferred.all (List.map fs ~f:(Monitor.try_with ~extract_exn:true))
-  in
+  let%bind results = Deferred.all (List.map fs ~f:(Monitor.try_with ~extract_exn:true)) in
   List.map results ~f:Or_error.of_exn_result
   |> Or_error.combine_errors_unit
   |> ok_exn
