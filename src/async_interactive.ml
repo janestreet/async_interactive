@@ -54,7 +54,14 @@ end = struct
 
   let run ~f fmt =
     let k str =
-      start str >>= fun job -> Monitor.protect f ~finally:(fun () -> finish job)
+      start str
+      >>= fun job ->
+      Monitor.protect
+        ~run:
+          `Schedule
+        ~rest:`Log
+        f
+        ~finally:(fun () -> finish job)
     in
     ksprintf k fmt
   ;;
@@ -225,6 +232,8 @@ let run_with_pager ?pager ~cmd ~stdin () =
   let pager = get_pager ?pager () in
   let full_cmd = sprintf "%s | %s" cmd pager in
   Monitor.protect
+    ~run:`Schedule
+    ~rest:`Log
     (fun () ->
        let pid =
          Spawn.spawn
@@ -269,6 +278,8 @@ let show_string_with_pager ?pager contents =
       Core.Filename.temp_file "async_interactive_show_string_with_pager" "")
   in
   Monitor.protect
+    ~run:`Schedule
+    ~rest:`Log
     (fun () ->
        let%bind () = Writer.save filename ~contents in
        show_file ?pager ~file:filename ())
@@ -276,7 +287,18 @@ let show_string_with_pager ?pager contents =
 ;;
 
 let all_wait_errors_unit fs =
-  let%bind results = Deferred.all (List.map fs ~f:(Monitor.try_with ~extract_exn:true)) in
+  let%bind results =
+    Deferred.all
+      (List.map
+         fs
+         ~f:
+           (Monitor.try_with
+              ~run:
+                `Schedule
+              ~rest:
+                `Log
+              ~extract_exn:true))
+  in
   List.map results ~f:Or_error.of_exn_result
   |> Or_error.combine_errors_unit
   |> ok_exn
@@ -297,7 +319,13 @@ let with_writer_to_pager ?pager () ~f =
      background if the user exits the pager early. *)
   all_wait_errors_unit
     [ (fun () ->
-        Monitor.protect (fun () -> f writer) ~finally:(fun () -> Writer.close writer))
+        Monitor.protect
+          ~run:
+            `Schedule
+          ~rest:`Log
+          (fun () ->
+            f writer)
+          ~finally:(fun () -> Writer.close writer))
     ; (fun () -> run_with_pager ?pager ~cmd:"cat" ~stdin:(Some pipe_r) ())
     ]
 ;;
