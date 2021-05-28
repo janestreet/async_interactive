@@ -2,7 +2,7 @@ open Core
 open Async
 open! Int.Replace_polymorphic_compare
 
-let interactive = ref Core.Unix.(isatty stdin && isatty stdout)
+let interactive = ref Core_unix.(isatty stdin && isatty stdout)
 
 let print_string_internal string =
   if not !interactive
@@ -275,7 +275,7 @@ let show_file ?pager ?msg ~file () =
 let show_string_with_pager ?pager contents =
   let%bind filename =
     In_thread.run (fun () ->
-      Core.Filename.temp_file "async_interactive_show_string_with_pager" "")
+      Filename_unix.temp_file "async_interactive_show_string_with_pager" "")
   in
   Monitor.protect
     ~run:`Schedule

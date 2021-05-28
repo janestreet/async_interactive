@@ -1,2 +1,2 @@
 (library (name async_interactive) (public_name async_interactive)
- (libraries async core spawn) (preprocess (pps ppx_jane)))
+ (libraries async core core.filename_unix spawn) (preprocess (pps ppx_jane)))
