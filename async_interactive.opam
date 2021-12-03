@@ -13,10 +13,10 @@ depends: [
   "ocaml" {>= "4.08.0"}
   "async"
   "core"
-  "core_kernel"
+  "core_unix"
   "ppx_jane"
-  "dune"        {>= "2.0.0"}
-  "spawn"       {>= "v0.12"}
+  "dune"      {>= "2.0.0"}
+  "spawn"     {>= "v0.12"}
 ]
 synopsis: "Utilities for building simple command-line based user interfaces"
 description: "
