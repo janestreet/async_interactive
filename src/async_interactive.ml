@@ -57,8 +57,7 @@ end = struct
       start str
       >>= fun job ->
       Monitor.protect
-        ~run:
-          `Schedule
+        ~run:`Schedule
         ~rest:`Log
         f
         ~finally:(fun () -> finish job)
@@ -197,20 +196,20 @@ let print ?red msg =
   (* One may be tempted to use Console.printf `Red ... but that's a non-async
      printf. We don't use Console.Ansi.string_with_attr because
      it's not in the base projection. *)
-  if Option.is_some red then printf "[1;31m%s[0m\n" msg else printf "%s\n" msg
+  if Option.is_some red then printf "\027[1;31m%s\027[0m\n" msg else printf "%s\n" msg
 ;;
 
 let arithmetic_challenge_exn ?red () =
-  Random.self_init ();
-  let a = 1 + Random.int 20 in
-  let b = 1 + Random.int 10 in
-  let c = 1 + Random.int b in
+  let random_state = Random.State.make_self_init () in
+  let a = Random.State.int_incl random_state 5 20 in
+  let b = Random.State.int_incl random_state 5 10 in
+  let c = List.random_element_exn ~random_state [ 3; 5; 7 ] in
   let d = (a + b) mod c in
   print ?red (sprintf "What is (%d + %d) mod %d?" a b c)
   >>= fun () ->
   read_line ()
   >>| function
-  | `Eof -> failwith "Received Eof while waiting for arithmetic challenge"
+  | `Eof -> failwith "Received EOF while waiting for arithmetic challenge"
   | `Ok line ->
     if d <> Int.of_string line then failwith "Incorrect answer for arithmetic challenge"
 ;;
@@ -286,25 +285,6 @@ let show_string_with_pager ?pager contents =
     ~finally:(fun () -> Unix.unlink filename)
 ;;
 
-let all_wait_errors_unit fs =
-  let%bind results =
-    Deferred.all
-      (List.map
-         fs
-         ~f:
-           (Monitor.try_with
-              ~run:
-                `Schedule
-              ~rest:
-                `Log
-              ~extract_exn:true))
-  in
-  List.map results ~f:Or_error.of_exn_result
-  |> Or_error.combine_errors_unit
-  |> ok_exn
-  |> return
-;;
-
 let with_writer_to_pager ?pager () ~f =
   let info = Info.of_string "Async_interactive.with_writer_to_pager" in
   let%bind `Reader pipe_r, `Writer pipe_w = Unix.pipe info in
@@ -314,18 +294,16 @@ let with_writer_to_pager ?pager () ~f =
        when [pager] quits. *)
     Writer.create pipe_w ~raise_when_consumer_leaves:false ~buffer_age_limit:`Unlimited
   in
-  (* [all_wait_errors_unit] ensures that we don't proceed with the error handling before
-     we're done with the process, but also we don't leave the [f] running in the
-     background if the user exits the pager early. *)
-  all_wait_errors_unit
-    [ (fun () ->
-        Monitor.protect
-          ~run:
-            `Schedule
-          ~rest:`Log
-          (fun () ->
-            f writer)
-          ~finally:(fun () -> Writer.close writer))
-    ; (fun () -> run_with_pager ?pager ~cmd:"cat" ~stdin:(Some pipe_r) ())
-    ]
+  (* [let%map.Deferred.Or_error ... and ...] ensures that we don't proceed with the error
+     handling before we're done with the process, but also we don't leave the [f] running
+     in the background if the user exits the pager early. *)
+  (let%map.Deferred.Or_error f_result =
+     Monitor.try_with_or_error ~extract_exn:true (fun () ->
+       Monitor.protect (fun () -> f writer) ~finally:(fun () -> Writer.close writer))
+   and () =
+     Monitor.try_with_or_error ~extract_exn:true (fun () ->
+       run_with_pager ?pager ~cmd:"cat" ~stdin:(Some pipe_r) ())
+   in
+   f_result)
+  >>| ok_exn
 ;;
