@@ -1,6 +1,5 @@
 open Core
 open Async
-open! Int.Replace_polymorphic_compare
 
 let interactive = ref Core_unix.(isatty stdin && isatty stdout)
 
