@@ -55,11 +55,7 @@ end = struct
     let k str =
       start str
       >>= fun job ->
-      Monitor.protect
-        ~run:`Schedule
-        ~rest:`Log
-        f
-        ~finally:(fun () -> finish job)
+      Monitor.protect ~run:`Schedule ~rest:`Log f ~finally:(fun () -> finish job)
     in
     ksprintf k fmt
   ;;
@@ -107,20 +103,20 @@ end
 let choose_dispatch (type a) ~(dispatch : (char * a) list)
   : char option -> (a, unit) Result.t Deferred.t
   = function
-    | None ->
-      (match List.filter dispatch ~f:(fun (c, _) -> Char.is_uppercase c) with
-       | _ :: _ :: _ as l ->
-         raise_s
-           [%sexp
-             "[Async_interactive.choose_dispatch] supplied multiple defaults"
+  | None ->
+    (match List.filter dispatch ~f:(fun (c, _) -> Char.is_uppercase c) with
+     | _ :: _ :: _ as l ->
+       raise_s
+         [%sexp
+           "[Async_interactive.choose_dispatch] supplied multiple defaults"
            , (List.map l ~f:fst : char list)]
-       | [ (_, a) ] -> return (Ok a)
-       | [] -> printf "Invalid empty reply.\n" >>| fun () -> Error ())
-    | Some ch ->
-      let filter (reply, _) = Char.equal (Char.lowercase reply) (Char.lowercase ch) in
-      (match List.find dispatch ~f:filter with
-       | Some (_, a) -> return (Ok a)
-       | None -> printf "Invalid reply [%c]\n" ch >>| fun () -> Error ())
+     | [ (_, a) ] -> return (Ok a)
+     | [] -> printf "Invalid empty reply.\n" >>| fun () -> Error ())
+  | Some ch ->
+    let filter (reply, _) = Char.equal (Char.lowercase reply) (Char.lowercase ch) in
+    (match List.find dispatch ~f:filter with
+     | Some (_, a) -> return (Ok a)
+     | None -> printf "Invalid reply [%c]\n" ch >>| fun () -> Error ())
 ;;
 
 let ask_dispatch_gen ~f question =
@@ -155,8 +151,8 @@ let ask_dispatch (type a) ?(show_options = true) question (dispatch : (char * a)
     | Ok char ->
       choose_dispatch ~dispatch char
       >>= (function
-        | Error () -> loop ()
-        | Ok res -> return res)
+      | Error () -> loop ()
+      | Ok res -> return res)
   in
   loop ()
 ;;
@@ -233,30 +229,30 @@ let run_with_pager ?pager ~cmd ~stdin () =
     ~run:`Schedule
     ~rest:`Log
     (fun () ->
-       let pid =
-         Spawn.spawn
-           ~prog:"/bin/sh"
-           ~argv:[ "sh"; "-c"; full_cmd ]
-           ?stdin:
-             (match stdin with
-              | Some fd -> Some (Fd.file_descr_exn fd)
-              | None -> None)
-           ()
-       in
-       let%bind () =
-         match stdin with
-         | None -> return ()
-         | Some fd -> Fd.close fd
-       in
-       match%map Unix.waitpid (Pid.of_int pid) with
-       | Ok () -> ()
-       (* 141 is how bash reports that its child (the pager) died of SIGPIPE.
+      let pid =
+        Spawn.spawn
+          ~prog:"/bin/sh"
+          ~argv:[ "sh"; "-c"; full_cmd ]
+          ?stdin:
+            (match stdin with
+             | Some fd -> Some (Fd.file_descr_exn fd)
+             | None -> None)
+          ()
+      in
+      let%bind () =
+        match stdin with
+        | None -> return ()
+        | Some fd -> Fd.close fd
+      in
+      match%map Unix.waitpid (Pid.of_int pid) with
+      | Ok () -> ()
+      (* 141 is how bash reports that its child (the pager) died of SIGPIPE.
           This can happen if the program is run non-interactively and its output is
           only partially consumed. We saw this in tests where we do things like
           [cmd ... | grep -q foo]. *)
-       | Error (`Exit_non_zero 141) -> ()
-       | _ as status ->
-         raise_s [%message "command failed" full_cmd (status : Unix.Exit_or_signal.t)])
+      | Error (`Exit_non_zero 141) -> ()
+      | _ as status ->
+        raise_s [%message "command failed" full_cmd (status : Unix.Exit_or_signal.t)])
     ~finally:(fun () -> Deferred.unit)
 ;;
 
@@ -279,8 +275,8 @@ let show_string_with_pager ?pager contents =
     ~run:`Schedule
     ~rest:`Log
     (fun () ->
-       let%bind () = Writer.save filename ~contents in
-       show_file ?pager ~file:filename ())
+      let%bind () = Writer.save filename ~contents in
+      show_file ?pager ~file:filename ())
     ~finally:(fun () -> Unix.unlink filename)
 ;;
 
