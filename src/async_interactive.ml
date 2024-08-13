@@ -151,8 +151,8 @@ let ask_dispatch (type a) ?(show_options = true) question (dispatch : (char * a)
     | Ok char ->
       choose_dispatch ~dispatch char
       >>= (function
-      | Error () -> loop ()
-      | Ok res -> return res)
+       | Error () -> loop ()
+       | Ok res -> return res)
   in
   loop ()
 ;;
