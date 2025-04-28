@@ -20,7 +20,7 @@ module Choice : sig
 end
 
 (** [ask_dispatch_gen question choices] displays [question] and gets user input to select
-    one of the [choices].  At most once choice can be the [default] choice. *)
+    one of the [choices]. At most once choice can be the [default] choice. *)
 val ask_dispatch_with_help
   :  ?show_options:bool (** default is [true] *)
   -> ?show_help:bool
@@ -32,11 +32,10 @@ val ask_dispatch_with_help
 val ask_yn : ?default:bool -> string -> bool Deferred.t
 val ask_ynf : ?default:bool -> ('a, unit, string, bool Deferred.t) format4 -> 'a
 
-(** This will prompt the user to solve a math problem and exit if they fail.
-    [red] will make the prompt print in red the the screen to make it more visually loud
+(** This will prompt the user to solve a math problem and exit if they fail. [red] will
+    make the prompt print in red the the screen to make it more visually loud
 
-    This will raise if no input or incorrect input is given
-*)
+    This will raise if no input or incorrect input is given *)
 val arithmetic_challenge_exn : ?red:unit -> unit -> unit Deferred.t
 
 (** These [show*] functions print even when [not !interactive]. *)
@@ -80,7 +79,6 @@ module Job : sig
         starting doing stuff A in process 4321 ...
         all done.
         starting doing stuff A in process 5678 ... done.
-      v}
-  *)
+      v} *)
   val run : f:(unit -> 'a Deferred.t) -> ('r, unit, string, 'a Deferred.t) format4 -> 'r
 end
