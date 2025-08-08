@@ -119,7 +119,7 @@ let choose_dispatch (type a) ~(dispatch : (char * a) list)
      | None -> printf "Invalid reply [%c]\n" ch >>| fun () -> Error ())
 ;;
 
-let ask_dispatch_gen ~f question =
+let ask_dispatch_gen_deferred ~f question =
   let rec loop () =
     printf "%s: " question
     >>= fun () ->
@@ -127,11 +127,15 @@ let ask_dispatch_gen ~f question =
     >>= function
     | `Eof -> failwith "Received EOF.  Exiting..."
     | `Ok line ->
-      (match f line with
+      (match%bind f line with
        | Ok res -> return res
        | Error msg -> printf "%s\n" msg >>= fun () -> loop ())
   in
   loop ()
+;;
+
+let ask_dispatch_gen ~f question =
+  ask_dispatch_gen_deferred ~f:(fun s -> f s |> Deferred.return) question
 ;;
 
 let ask_dispatch (type a) ?(show_options = true) question (dispatch : (char * a) list) =
