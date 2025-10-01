@@ -119,7 +119,7 @@ let choose_dispatch (type a) ~(dispatch : (char * a) list)
      | None -> printf "Invalid reply [%c]\n" ch >>| fun () -> Error ())
 ;;
 
-let ask_dispatch_gen ~f question =
+let ask_dispatch_gen_deferred ~f question =
   let rec loop () =
     printf "%s: " question
     >>= fun () ->
@@ -127,11 +127,15 @@ let ask_dispatch_gen ~f question =
     >>= function
     | `Eof -> failwith "Received EOF.  Exiting..."
     | `Ok line ->
-      (match f line with
+      (match%bind f line with
        | Ok res -> return res
        | Error msg -> printf "%s\n" msg >>= fun () -> loop ())
   in
   loop ()
+;;
+
+let ask_dispatch_gen ~f question =
+  ask_dispatch_gen_deferred ~f:(fun s -> f s |> Deferred.return) question
 ;;
 
 let ask_dispatch (type a) ?(show_options = true) question (dispatch : (char * a) list) =
@@ -207,6 +211,17 @@ let arithmetic_challenge_exn ?red () =
   | `Eof -> failwith "Received EOF while waiting for arithmetic challenge"
   | `Ok line ->
     if d <> Int.of_string line then failwith "Incorrect answer for arithmetic challenge"
+;;
+
+let typing_challenge_exn ?red ?(edit_distance = 0) s =
+  print ?red (sprintf "Type the following to proceed: %s" s)
+  >>= fun () ->
+  read_line ()
+  >>| function
+  | `Eof -> failwith "Received EOF while waiting for typing challenge"
+  | `Ok line ->
+    if Base.String.edit_distance line s > edit_distance
+    then failwith "Failed typing challenge"
 ;;
 
 let ask_ynf ?default question = Printf.ksprintf (ask_yn ?default) question

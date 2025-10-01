@@ -10,6 +10,12 @@ val print_endline : string -> unit Deferred.t
 val printf : ('r, unit, string, unit Deferred.t) format4 -> 'r
 val prints : string -> 'a -> ('a -> Sexp.t) -> unit Deferred.t
 val print_s : Sexp.t -> unit Deferred.t
+
+val ask_dispatch_gen_deferred
+  :  f:(string -> ('a, string) Result.t Deferred.t)
+  -> string
+  -> 'a Deferred.t
+
 val ask_dispatch_gen : f:(string -> ('a, string) Result.t) -> string -> 'a Deferred.t
 
 module Choice : sig
@@ -37,6 +43,12 @@ val ask_ynf : ?default:bool -> ('a, unit, string, bool Deferred.t) format4 -> 'a
 
     This will raise if no input or incorrect input is given *)
 val arithmetic_challenge_exn : ?red:unit -> unit -> unit Deferred.t
+
+(** This will prompt the user to type the input string to proceed and exit if they fail.
+    [red] will make the prompt print in red. [edit_distance] specifies the maximum edit
+    distance the user's input must have from the challenge string in order to succeed
+    (default 0) *)
+val typing_challenge_exn : ?red:unit -> ?edit_distance:int -> string -> unit Deferred.t
 
 (** These [show*] functions print even when [not !interactive]. *)
 val show_file : ?pager:string -> ?msg:string -> file:string -> unit -> unit Deferred.t
