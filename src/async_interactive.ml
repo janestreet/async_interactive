@@ -213,6 +213,17 @@ let arithmetic_challenge_exn ?red () =
     if d <> Int.of_string line then failwith "Incorrect answer for arithmetic challenge"
 ;;
 
+let typing_challenge_exn ?red ?(edit_distance = 0) s =
+  print ?red (sprintf "Type the following to proceed: %s" s)
+  >>= fun () ->
+  read_line ()
+  >>| function
+  | `Eof -> failwith "Received EOF while waiting for typing challenge"
+  | `Ok line ->
+    if Base.String.edit_distance line s > edit_distance
+    then failwith "Failed typing challenge"
+;;
+
 let ask_ynf ?default question = Printf.ksprintf (ask_yn ?default) question
 
 let get_pager ?pager () =

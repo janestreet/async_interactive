@@ -44,6 +44,12 @@ val ask_ynf : ?default:bool -> ('a, unit, string, bool Deferred.t) format4 -> 'a
     This will raise if no input or incorrect input is given *)
 val arithmetic_challenge_exn : ?red:unit -> unit -> unit Deferred.t
 
+(** This will prompt the user to type the input string to proceed and exit if they fail.
+    [red] will make the prompt print in red. [edit_distance] specifies the maximum edit
+    distance the user's input must have from the challenge string in order to succeed
+    (default 0) *)
+val typing_challenge_exn : ?red:unit -> ?edit_distance:int -> string -> unit Deferred.t
+
 (** These [show*] functions print even when [not !interactive]. *)
 val show_file : ?pager:string -> ?msg:string -> file:string -> unit -> unit Deferred.t
 
