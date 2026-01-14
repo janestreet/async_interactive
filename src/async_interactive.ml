@@ -306,7 +306,17 @@ let with_writer_to_pager ?pager () ~f =
      in the background if the user exits the pager early. *)
   (let%map.Deferred.Or_error f_result =
      Monitor.try_with_or_error ~extract_exn:true (fun () ->
-       Monitor.protect (fun () -> f writer) ~finally:(fun () -> Writer.close writer))
+       Monitor.protect
+         (fun () -> f writer)
+         ~finally:(fun () ->
+           (* By default, [Writer.close] waits only 5 seconds to flush writes to a file
+              descriptor that does not point to a file (eg. unix pipes are not files).
+              Commonly used pagers (such as [less]) consume the input on-the-fly as the
+              user scrolls. This means that, if [f] finishes with more buffered writes
+              than the pager had read ahead, and the user did not scroll for 5 seconds,
+              those writes would get dropped by [Writer.close]. So we pass
+              [~force_close:(Deferred.never ())] to always flush the full buffer. *)
+           Writer.close ~force_close:(Deferred.never ()) writer))
    and () =
      Monitor.try_with_or_error ~extract_exn:true (fun () ->
        run_with_pager ?pager ~cmd:"cat" ~stdin:(Some pipe_r) ())
