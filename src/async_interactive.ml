@@ -192,9 +192,8 @@ let ask_yn ?default question =
 ;;
 
 let print ?red msg =
-  (* One may be tempted to use Console.printf `Red ... but that's a non-async
-     printf. We don't use Console.Ansi.string_with_attr because
-     it's not in the base projection. *)
+  (* One may be tempted to use Console.printf `Red ... but that's a non-async printf. We
+     don't use Console.Ansi.string_with_attr because it's not in the base projection. *)
   if Option.is_some red then printf "\027[1;31m%s\027[0m\n" msg else printf "%s\n" msg
 ;;
 
@@ -261,10 +260,9 @@ let run_with_pager ?pager ~cmd ~stdin () =
       in
       match%map Unix.waitpid (Pid.of_int pid) with
       | Ok () -> ()
-      (* 141 is how bash reports that its child (the pager) died of SIGPIPE.
-          This can happen if the program is run non-interactively and its output is
-          only partially consumed. We saw this in tests where we do things like
-          [cmd ... | grep -q foo]. *)
+      (* 141 is how bash reports that its child (the pager) died of SIGPIPE. This can
+         happen if the program is run non-interactively and its output is only partially
+         consumed. We saw this in tests where we do things like [cmd ... | grep -q foo]. *)
       | Error (`Exit_non_zero 141) -> ()
       | _ as status ->
         raise_s [%message "command failed" full_cmd (status : Unix.Exit_or_signal.t)])
@@ -299,9 +297,8 @@ let with_writer_to_pager ?pager () ~f =
   let info = Info.of_string "Async_interactive.with_writer_to_pager" in
   let%bind `Reader pipe_r, `Writer pipe_w = Unix.pipe info in
   let writer =
-    (* Setting these two flags has the same effect as
-       [Writer.behave_nicely_in_pipeline], apart from it does not initiate shutdown
-       when [pager] quits. *)
+    (* Setting these two flags has the same effect as [Writer.behave_nicely_in_pipeline],
+       apart from it does not initiate shutdown when [pager] quits. *)
     Writer.create pipe_w ~raise_when_consumer_leaves:false ~buffer_age_limit:`Unlimited
   in
   (* [let%map.Deferred.Or_error ... and ...] ensures that we don't proceed with the error
@@ -309,7 +306,17 @@ let with_writer_to_pager ?pager () ~f =
      in the background if the user exits the pager early. *)
   (let%map.Deferred.Or_error f_result =
      Monitor.try_with_or_error ~extract_exn:true (fun () ->
-       Monitor.protect (fun () -> f writer) ~finally:(fun () -> Writer.close writer))
+       Monitor.protect
+         (fun () -> f writer)
+         ~finally:(fun () ->
+           (* By default, [Writer.close] waits only 5 seconds to flush writes to a file
+              descriptor that does not point to a file (eg. unix pipes are not files).
+              Commonly used pagers (such as [less]) consume the input on-the-fly as the
+              user scrolls. This means that, if [f] finishes with more buffered writes
+              than the pager had read ahead, and the user did not scroll for 5 seconds,
+              those writes would get dropped by [Writer.close]. So we pass
+              [~force_close:(Deferred.never ())] to always flush the full buffer. *)
+           Writer.close ~force_close:(Deferred.never ()) writer))
    and () =
      Monitor.try_with_or_error ~extract_exn:true (fun () ->
        run_with_pager ?pager ~cmd:"cat" ~stdin:(Some pipe_r) ())
