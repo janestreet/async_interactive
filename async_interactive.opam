@@ -17,9 +17,12 @@ depends: [
   "core_unix"
   "ppx_jane"
   "dune"      {>= "3.17.0"}
-  "spawn"     {= "v0.15.1+ox"}
+  "spawn"     {>= "v0.15"}
 ]
 available: arch != "x86_32"
+conflicts: [
+  "oxcaml-compiler" {< "5.2.0minus39"}
+]
 synopsis: "Utilities for building simple command-line based user interfaces"
 description: "
 "
